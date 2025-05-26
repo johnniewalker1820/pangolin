@@ -46,7 +46,7 @@ import { toast } from "@app/hooks/useToast";
 import Link from "next/link";
 import { useSupporterStatusContext } from "@app/hooks/useSupporterStatusContext";
 // Import enhanced styles
-import "../resource-auth-styles.css";
+import "../../resource-auth-styles.css";
 // Import new components
 import SecurityStatus from "../components/SecurityStatus";
 
