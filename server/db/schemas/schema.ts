@@ -82,7 +82,17 @@ export const resources = sqliteTable("resources", {
         .notNull()
         .default(false),
     tlsServerName: text("tlsServerName"),
-    setHostHeader: text("setHostHeader")
+    setHostHeader: text("setHostHeader"),
+    // Auth customization fields
+    authCustomCSS: text("authCustomCSS"),
+    authCustomHTML: text("authCustomHTML"),
+    authCustomLogo: text("authCustomLogo"), // Base64 encoded image or URL
+    authCustomTitle: text("authCustomTitle"),
+    authCustomDescription: text("authCustomDescription"),
+    authCustomBackground: text("authCustomBackground"), // CSS background property
+    authCustomEnabled: integer("authCustomEnabled", { mode: "boolean" })
+        .notNull()
+        .default(false)
 });
 
 export const targets = sqliteTable("targets", {

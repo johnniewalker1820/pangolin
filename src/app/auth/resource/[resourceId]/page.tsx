@@ -22,6 +22,8 @@ export default async function ResourceAuthPage(props: {
     searchParams: Promise<{
         redirect: string | undefined;
         token: string | undefined;
+        preview: string | undefined;
+        data: string | undefined;
     }>;
 }) {
     const params = await props.params;
@@ -29,14 +31,36 @@ export default async function ResourceAuthPage(props: {
 
     const env = pullEnv();
 
-    let authInfo: GetResourceAuthInfoResponse | undefined;
-    try {
-        const res = await internal.get<
-            AxiosResponse<GetResourceAuthInfoResponse>
-        >(`/resource/${params.resourceId}/auth`, await authCookieHeader());
+    // Handle preview mode
+    let previewCustomization: any = null;
+    if (searchParams.preview === 'true' && searchParams.data) {
+        try {
+            previewCustomization = JSON.parse(decodeURIComponent(searchParams.data));
+        } catch (e) {
+            console.error('Failed to parse preview data:', e);
+        }
+    }
 
-        if (res && res.status === 200) {
-            authInfo = res.data.data;
+    let authInfo: GetResourceAuthInfoResponse | undefined;
+    let authCustomization: any = null;
+    try {
+        const [authInfoRes, authCustomRes] = await Promise.all([
+            internal.get<AxiosResponse<GetResourceAuthInfoResponse>>(
+                `/resource/${params.resourceId}/auth`, 
+                await authCookieHeader()
+            ),
+            internal.get(
+                `/resource/${params.resourceId}/auth-customization`,
+                await authCookieHeader()
+            ).catch(() => null) // Don't fail if customization endpoint doesn't exist
+        ]);
+
+        if (authInfoRes && authInfoRes.status === 200) {
+            authInfo = authInfoRes.data.data;
+        }
+
+        if (authCustomRes && authCustomRes.status === 200 && authCustomRes.data.success) {
+            authCustomization = authCustomRes.data.data;
         }
     } catch (e) {}
 
@@ -157,6 +181,7 @@ export default async function ResourceAuthPage(props: {
                         }}
                         redirect={redirectUrl}
                         idps={loginIdps}
+                        customization={previewCustomization || authCustomization}
                     />
                 </div>
             )}

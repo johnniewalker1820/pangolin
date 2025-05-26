@@ -23,7 +23,8 @@ import {
     FormLabel,
     FormMessage
 } from "@/components/ui/form";
-import { LockIcon, Binary, Key, User, Send, AtSign } from "lucide-react";
+import { LockIcon, Binary, Key, User, Send, AtSign, Shield, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 import {
     InputOTP,
     InputOTPGroup,
@@ -44,6 +45,10 @@ import { useEnvContext } from "@app/hooks/useEnvContext";
 import { toast } from "@app/hooks/useToast";
 import Link from "next/link";
 import { useSupporterStatusContext } from "@app/hooks/useSupporterStatusContext";
+// Import enhanced styles
+import "../resource-auth-styles.css";
+// Import new components
+import SecurityStatus from "../components/SecurityStatus";
 
 const pinSchema = z.object({
     pin: z
@@ -82,10 +87,20 @@ type ResourceAuthPortalProps = {
     };
     redirect: string;
     idps?: LoginFormIDP[];
+    customization?: {
+        authCustomCSS?: string | null;
+        authCustomHTML?: string | null;
+        authCustomLogo?: string | null;
+        authCustomTitle?: string | null;
+        authCustomDescription?: string | null;
+        authCustomBackground?: string | null;
+        authCustomEnabled?: boolean;
+    };
 };
 
 export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
     const router = useRouter();
+    const [showPassword, setShowPassword] = useState(false);
 
     const getNumMethods = () => {
         let colLength = 0;
@@ -275,25 +290,88 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
     }
 
     return (
-        <div>
+        <div 
+            className="resource-auth-container"
+            style={{
+                ...(props.customization?.authCustomBackground && {
+                    background: props.customization.authCustomBackground
+                })
+            }}
+        >
+            {/* Custom CSS */}
+            {props.customization?.authCustomEnabled && props.customization?.authCustomCSS && (
+                <style dangerouslySetInnerHTML={{ 
+                    __html: props.customization.authCustomCSS 
+                }} />
+            )}
+            
+            {/* Custom HTML */}
+            {props.customization?.authCustomEnabled && props.customization?.authCustomHTML && (
+                <div 
+                    className="auth-custom-html-content"
+                    dangerouslySetInnerHTML={{ __html: props.customization.authCustomHTML }} 
+                />
+            )}
+            
             {!accessDenied ? (
-                <div>
-                    <div className="text-center mb-2">
-                        <span className="text-sm text-muted-foreground">
-                            Powered by{" "}
-                            <Link
-                                href="https://github.com/fosrl/pangolin"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline"
-                            >
-                                Pangolin
-                            </Link>
-                        </span>
+                <div className="resource-auth-content flex flex-col items-center justify-center min-h-screen p-4">
+                    {/* Enhanced Header with Logo */}
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="auth-logo-container mb-6">
+                            <div className="auth-logo-glow"></div>
+                            <div className="relative bg-white dark:bg-gray-800 rounded-full p-4 shadow-xl border border-gray-200 dark:border-gray-700">
+                                <Image
+                                    src={props.customization?.authCustomEnabled && props.customization?.authCustomLogo 
+                                        ? props.customization.authCustomLogo 
+                                        : "/logo/pangolin_orange.svg"}
+                                    alt="Logo"
+                                    width={64}
+                                    height={64}
+                                    className="w-16 h-16"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="text-center">
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                                {props.customization?.authCustomEnabled && props.customization?.authCustomTitle 
+                                    ? props.customization.authCustomTitle 
+                                    : "Secure Access Portal"}
+                            </h1>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">
+                                {props.customization?.authCustomEnabled && props.customization?.authCustomDescription 
+                                    ? props.customization.authCustomDescription 
+                                    : (<>
+                                        Powered by{" "}
+                                        <Link
+                                            href="https://github.com/fosrl/pangolin"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="underline hover:text-blue-600 transition-colors"
+                                        >
+                                            Pangolin
+                                        </Link>
+                                    </>)}
+                            </p>
+                            <div className="security-badge mt-2">
+                                <Shield className="security-badge-icon" />
+                                <span>Secured Connection</span>
+                            </div>
+                            <div className="mt-3">
+                                <SecurityStatus 
+                                    isSecure={true}
+                                    connectionType="https"
+                                    authMethod={activeTab as any}
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <Card>
+                    <Card className="auth-card-enhanced">
                         <CardHeader>
-                            <CardTitle>Authentication Required</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <LockIcon className="w-5 h-5" />
+                                Authentication Required
+                            </CardTitle>
                             <CardDescription>
                                 {numMethods > 1
                                     ? `Choose your preferred method to access ${props.resource.name}`
@@ -305,6 +383,7 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                                 value={activeTab}
                                 onValueChange={setActiveTab}
                                 orientation="horizontal"
+                                className="auth-tabs-enhanced"
                             >
                                 {numMethods > 1 && (
                                     <TabsList
@@ -319,25 +398,25 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                                         }`}
                                     >
                                         {props.methods.pincode && (
-                                            <TabsTrigger value="pin">
+                                            <TabsTrigger value="pin" className="auth-tab-enhanced">
                                                 <Binary className="w-4 h-4 mr-1" />{" "}
                                                 PIN
                                             </TabsTrigger>
                                         )}
                                         {props.methods.password && (
-                                            <TabsTrigger value="password">
+                                            <TabsTrigger value="password" className="auth-tab-enhanced">
                                                 <Key className="w-4 h-4 mr-1" />{" "}
                                                 Password
                                             </TabsTrigger>
                                         )}
                                         {props.methods.sso && (
-                                            <TabsTrigger value="sso">
+                                            <TabsTrigger value="sso" className="auth-tab-enhanced">
                                                 <User className="w-4 h-4 mr-1" />{" "}
                                                 User
                                             </TabsTrigger>
                                         )}
                                         {props.methods.whitelist && (
-                                            <TabsTrigger value="whitelist">
+                                            <TabsTrigger value="whitelist" className="auth-tab-enhanced">
                                                 <AtSign className="w-4 h-4 mr-1" />{" "}
                                                 Email
                                             </TabsTrigger>
@@ -426,11 +505,15 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                                                 )}
                                                 <Button
                                                     type="submit"
-                                                    className="w-full"
+                                                    className="w-full auth-button-enhanced"
                                                     loading={loadingLogin}
                                                     disabled={loadingLogin}
                                                 >
-                                                    <LockIcon className="w-4 h-4 mr-2" />
+                                                    {loadingLogin ? (
+                                                        <div className="auth-loading-spinner mr-2" />
+                                                    ) : (
+                                                        <LockIcon className="w-4 h-4 mr-2" />
+                                                    )}
                                                     Log in with PIN
                                                 </Button>
                                             </form>
@@ -462,6 +545,7 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                                                             <FormControl>
                                                                 <Input
                                                                     type="password"
+                                                                    className="auth-input-enhanced"
                                                                     {...field}
                                                                 />
                                                             </FormControl>
@@ -480,11 +564,15 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
 
                                                 <Button
                                                     type="submit"
-                                                    className="w-full"
+                                                    className="w-full auth-button-enhanced"
                                                     loading={loadingLogin}
                                                     disabled={loadingLogin}
                                                 >
-                                                    <LockIcon className="w-4 h-4 mr-2" />
+                                                    {loadingLogin ? (
+                                                        <div className="auth-loading-spinner mr-2" />
+                                                    ) : (
+                                                        <LockIcon className="w-4 h-4 mr-2" />
+                                                    )}
                                                     Log In with Password
                                                 </Button>
                                             </form>
@@ -531,6 +619,7 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                                                                 <FormControl>
                                                                     <Input
                                                                         type="email"
+                                                                        className="auth-input-enhanced"
                                                                         {...field}
                                                                     />
                                                                 </FormControl>
@@ -555,11 +644,15 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
 
                                                     <Button
                                                         type="submit"
-                                                        className="w-full"
+                                                        className="w-full auth-button-enhanced"
                                                         loading={loadingLogin}
                                                         disabled={loadingLogin}
                                                     >
-                                                        <Send className="w-4 h-4 mr-2" />
+                                                        {loadingLogin ? (
+                                                            <div className="auth-loading-spinner mr-2" />
+                                                        ) : (
+                                                            <Send className="w-4 h-4 mr-2" />
+                                                        )}
                                                         Send One-time Code
                                                     </Button>
                                                 </form>
@@ -589,6 +682,7 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                                                                 <FormControl>
                                                                     <Input
                                                                         type="password"
+                                                                        className="auth-input-enhanced"
                                                                         {...field}
                                                                     />
                                                                 </FormControl>
@@ -607,11 +701,15 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
 
                                                     <Button
                                                         type="submit"
-                                                        className="w-full"
+                                                        className="w-full auth-button-enhanced"
                                                         loading={loadingLogin}
                                                         disabled={loadingLogin}
                                                     >
-                                                        <LockIcon className="w-4 h-4 mr-2" />
+                                                        {loadingLogin ? (
+                                                            <div className="auth-loading-spinner mr-2" />
+                                                        ) : (
+                                                            <LockIcon className="w-4 h-4 mr-2" />
+                                                        )}
                                                         Submit OTP
                                                     </Button>
 
@@ -645,7 +743,9 @@ export default function ResourceAuthPortal(props: ResourceAuthPortalProps) {
                     )}
                 </div>
             ) : (
-                <ResourceAccessDenied />
+                <div className="resource-auth-content flex flex-col items-center justify-center min-h-screen p-4">
+                    <ResourceAccessDenied />
+                </div>
             )}
         </div>
     );

@@ -368,6 +368,21 @@ authenticated.get(
     resource.getResourceWhitelist
 );
 
+// Auth customization endpoints
+authenticated.get(
+    `/resource/:resourceId/auth-customization`,
+    verifyResourceAccess,
+    verifyUserHasAction(ActionsEnum.getResource),
+    resource.getResourceAuthCustomization
+);
+
+authenticated.post(
+    `/resource/:resourceId/auth-customization`,
+    verifyResourceAccess,
+    verifyUserHasAction(ActionsEnum.updateResource),
+    resource.setResourceAuthCustomization
+);
+
 authenticated.post(
     `/resource/:resourceId/transfer`,
     verifyResourceAccess,

@@ -48,6 +48,11 @@ import { useRouter } from "next/navigation";
 import { UserType } from "@server/types/UserTypes";
 import { Alert, AlertDescription, AlertTitle } from "@app/components/ui/alert";
 import { InfoIcon } from "lucide-react";
+import { Textarea } from "@app/components/ui/textarea";
+import { Input } from "@app/components/ui/input";
+import AuthPreview from "./AuthPreview";
+import ImageUpload from "@/components/ui/image-upload";
+import AuthTemplates from "./AuthTemplates";
 
 const UsersRolesFormSchema = z.object({
     roles: z.array(
@@ -71,6 +76,16 @@ const whitelistSchema = z.object({
             text: z.string()
         })
     )
+});
+
+const authCustomizationSchema = z.object({
+    authCustomCSS: z.string().optional(),
+    authCustomHTML: z.string().optional(),
+    authCustomLogo: z.string().optional(),
+    authCustomTitle: z.string().optional(),
+    authCustomDescription: z.string().optional(),
+    authCustomBackground: z.string().optional(),
+    authCustomEnabled: z.boolean()
 });
 
 export default function ResourceAuthenticationPage() {
@@ -119,6 +134,10 @@ export default function ResourceAuthenticationPage() {
     const [isSetPasswordOpen, setIsSetPasswordOpen] = useState(false);
     const [isSetPincodeOpen, setIsSetPincodeOpen] = useState(false);
 
+    // Auth customization states
+    const [loadingSaveAuthCustomization, setLoadingSaveAuthCustomization] = useState(false);
+    const [loadingAuthCustomization, setLoadingAuthCustomization] = useState(true);
+
     const usersRolesForm = useForm<z.infer<typeof UsersRolesFormSchema>>({
         resolver: zodResolver(UsersRolesFormSchema),
         defaultValues: { roles: [], users: [] }
@@ -129,6 +148,19 @@ export default function ResourceAuthenticationPage() {
         defaultValues: { emails: [] }
     });
 
+    const authCustomizationForm = useForm<z.infer<typeof authCustomizationSchema>>({
+        resolver: zodResolver(authCustomizationSchema),
+        defaultValues: {
+            authCustomCSS: "",
+            authCustomHTML: "",
+            authCustomLogo: "",
+            authCustomTitle: "",
+            authCustomDescription: "",
+            authCustomBackground: "",
+            authCustomEnabled: false
+        }
+    });
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -137,7 +169,8 @@ export default function ResourceAuthenticationPage() {
                     resourceRolesResponse,
                     usersResponse,
                     resourceUsersResponse,
-                    whitelist
+                    whitelist,
+                    authCustomizationResponse
                 ] = await Promise.all([
                     api.get<AxiosResponse<ListRolesResponse>>(
                         `/org/${org?.org.orgId}/roles`
@@ -153,6 +186,9 @@ export default function ResourceAuthenticationPage() {
                     ),
                     api.get<AxiosResponse<GetResourceWhitelistResponse>>(
                         `/resource/${resource.resourceId}/whitelist`
+                    ),
+                    api.get(
+                        `/resource/${resource.resourceId}/auth-customization`
                     )
                 ]);
 
@@ -198,7 +234,13 @@ export default function ResourceAuthenticationPage() {
                     }))
                 );
 
+                // Load auth customization data
+                if (authCustomizationResponse.data.success) {
+                    authCustomizationForm.reset(authCustomizationResponse.data.data);
+                }
+
                 setPageLoading(false);
+                setLoadingAuthCustomization(false);
             } catch (e) {
                 console.error(e);
                 toast({
@@ -251,6 +293,39 @@ export default function ResourceAuthenticationPage() {
             setLoadingSaveWhitelist(false);
         }
     }
+
+    async function saveAuthCustomization(data: z.infer<typeof authCustomizationSchema>) {
+        setLoadingSaveAuthCustomization(true);
+        try {
+            await api.post(`/resource/${resource.resourceId}/auth-customization`, data);
+
+            toast({
+                title: "Saved successfully",
+                description: "Auth customization settings have been saved"
+            });
+            router.refresh();
+        } catch (e) {
+            console.error(e);
+            toast({
+                variant: "destructive",
+                title: "Failed to save customization",
+                description: formatAxiosError(
+                    e,
+                    "An error occurred while saving the auth customization"
+                )
+            });
+        } finally {
+            setLoadingSaveAuthCustomization(false);
+        }
+    }
+
+    const applyTemplate = (templateData: any) => {
+        authCustomizationForm.reset(templateData);
+        toast({
+            title: "Template applied",
+            description: "The template has been applied. Don't forget to save your changes."
+        });
+    };
 
     async function onSubmitUsersRoles(
         data: z.infer<typeof UsersRolesFormSchema>
@@ -733,6 +808,180 @@ export default function ResourceAuthenticationPage() {
                         >
                             Save Whitelist
                         </Button>
+                    </SettingsSectionFooter>
+                </SettingsSection>
+
+                <SettingsSection>
+                    <SettingsSectionHeader>
+                        <SettingsSectionTitle>
+                            Authentication Page Customization
+                        </SettingsSectionTitle>
+                        <SettingsSectionDescription>
+                            Customize the appearance and content of your authentication page with HTML, CSS, and images
+                        </SettingsSectionDescription>
+                    </SettingsSectionHeader>
+                    <SettingsSectionBody>
+                        <AuthTemplates onApplyTemplate={applyTemplate} />
+                        
+                        <Form {...authCustomizationForm}>
+                            <form
+                                onSubmit={authCustomizationForm.handleSubmit(saveAuthCustomization)}
+                                id="auth-customization-form"
+                                className="space-y-4"
+                            >
+                                <SwitchInput
+                                    id="auth-custom-enabled"
+                                    label="Enable Custom Authentication Page"
+                                    description="Enable custom styling and content for your authentication page"
+                                    defaultChecked={authCustomizationForm.getValues().authCustomEnabled}
+                                    onCheckedChange={(val) => authCustomizationForm.setValue("authCustomEnabled", val)}
+                                />
+
+                                {authCustomizationForm.watch("authCustomEnabled") && (
+                                    <>
+                                        <FormField
+                                            control={authCustomizationForm.control}
+                                            name="authCustomTitle"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Custom Title</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter custom page title"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Override the default authentication page title
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={authCustomizationForm.control}
+                                            name="authCustomDescription"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Custom Description</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea
+                                                            placeholder="Enter custom description"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Custom description text shown on the authentication page
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={authCustomizationForm.control}
+                                            name="authCustomCSS"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Custom CSS</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea
+                                                            placeholder="Enter custom CSS styles"
+                                                            className="font-mono"
+                                                            rows={6}
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Custom CSS styles to apply to the authentication page
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={authCustomizationForm.control}
+                                            name="authCustomHTML"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Custom HTML</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea
+                                                            placeholder="Enter custom HTML content"
+                                                            className="font-mono"
+                                                            rows={4}
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Custom HTML content to add to the authentication page
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={authCustomizationForm.control}
+                                            name="authCustomLogo"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Custom Logo</FormLabel>
+                                                    <FormControl>
+                                                        <ImageUpload
+                                                            value={field.value}
+                                                            onChange={field.onChange}
+                                                            placeholder="Enter logo URL or upload an image file"
+                                                            accept="image/*"
+                                                            maxSize={2}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Upload an image file or enter a URL for a custom logo
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={authCustomizationForm.control}
+                                            name="authCustomBackground"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Custom Background</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter CSS background property"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        CSS background property (e.g., linear-gradient(45deg, #ff0000, #0000ff))
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </>
+                                )}
+                            </form>
+                        </Form>
+                    </SettingsSectionBody>
+                    <SettingsSectionFooter>
+                        <div className="flex items-center justify-between w-full">
+                            <AuthPreview customization={authCustomizationForm.getValues()} />
+                            <Button
+                                type="submit"
+                                form="auth-customization-form"
+                                loading={loadingSaveAuthCustomization}
+                                disabled={loadingSaveAuthCustomization || loadingAuthCustomization}
+                            >
+                                Save Customization
+                            </Button>
+                        </div>
                     </SettingsSectionFooter>
                 </SettingsSection>
             </SettingsContainer>
