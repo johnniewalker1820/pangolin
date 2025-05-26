@@ -1,5 +1,5 @@
 import db from "@server/db";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { resources } from "@server/db/schemas";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -17,9 +17,9 @@ const AuthCustomizationSchema = z.object({
         (logo) => !logo || logo.startsWith('data:image/') || logo.startsWith('http://') || logo.startsWith('https://'), 
         { message: "Logo must be a valid image URL or data URL" }
     ),
-    authCustomTitle: z.string().optional().max(100, "Title too long"),
-    authCustomDescription: z.string().optional().max(500, "Description too long"),
-    authCustomBackground: z.string().optional().max(200, "Background CSS too long"),
+    authCustomTitle: z.string().max(100, "Title too long").optional(),
+    authCustomDescription: z.string().max(500, "Description too long").optional(),
+    authCustomBackground: z.string().max(200, "Background CSS too long").optional(),
     authCustomEnabled: z.boolean()
 });
 
@@ -31,7 +31,7 @@ type AuthCustomizationRequest = z.infer<typeof AuthCustomizationSchema>;
 type AuthCustomizationParams = z.infer<typeof AuthCustomizationParamsSchema>;
 
 // GET /resource/:resourceId/auth-customization
-export async function getResourceAuthCustomization(req: Request, res: Response) {
+export async function getResourceAuthCustomization(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const { resourceId } = AuthCustomizationParamsSchema.parse(req.params);
 
@@ -50,10 +50,11 @@ export async function getResourceAuthCustomization(req: Request, res: Response) 
             .limit(1);
 
         if (!resource || resource.length === 0) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: "Resource not found"
             });
+            return;
         }
 
         const authCustomization = {
@@ -80,7 +81,7 @@ export async function getResourceAuthCustomization(req: Request, res: Response) 
 }
 
 // POST /resource/:resourceId/auth-customization
-export async function setResourceAuthCustomization(req: Request, res: Response) {
+export async function setResourceAuthCustomization(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const { resourceId } = AuthCustomizationParamsSchema.parse(req.params);
         const authCustomData = AuthCustomizationSchema.parse(req.body);
@@ -95,7 +96,7 @@ export async function setResourceAuthCustomization(req: Request, res: Response) 
                 authCustomTitle: authCustomData.authCustomTitle || null,
                 authCustomDescription: authCustomData.authCustomDescription || null,
                 authCustomBackground: authCustomData.authCustomBackground || null,
-                authCustomEnabled: authCustomData.authCustomEnabled ? 1 : 0
+                authCustomEnabled: authCustomData.authCustomEnabled
             })
             .where(eq(resources.resourceId, resourceId));
 
