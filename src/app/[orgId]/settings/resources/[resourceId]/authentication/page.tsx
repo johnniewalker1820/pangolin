@@ -51,7 +51,7 @@ import { InfoIcon } from "lucide-react";
 import { Textarea } from "@app/components/ui/textarea";
 import { Input } from "@app/components/ui/input";
 import AuthPreview from "./AuthPreview";
-import ImageUpload from "@/components/ui/image-upload";
+import ImageUpload from "@app/components/ui/image-upload";
 import AuthTemplates from "./AuthTemplates";
 
 const UsersRolesFormSchema = z.object({
